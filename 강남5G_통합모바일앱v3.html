@@ -374,12 +374,16 @@
             try {
                 // JSON 데이터 파일 로드
                 const [sfpRes, muxRes] = await Promise.all([
-                    fetch('sfp_data.json'),
-                    fetch('mux_data.json')
+                    fetch("https://raw.githubusercontent.com/holic614/cell-data/main/sfp_data.json"),
+                    fetch("https://raw.githubusercontent.com/holic614/cell-data/main/mux_data.json")
                 ]);
                 
                 SFP_DATA = await sfpRes.json();
                 MUX_DATA_LIST = await muxRes.json();
+
+                console.log("SFP:", SFP_DATA);
+                console.log("MUX:", MUX_DATA_LIST);
+                
             } catch (error) {
                 console.error("데이터 로드 중 오류 발생:", error);
                 alert("데이터 파일을 찾을 수 없거나 불러오는 데 실패했습니다.");
