@@ -389,7 +389,6 @@
                 alert("데이터 파일을 찾을 수 없거나 불러오는 데 실패했습니다.");
                 return;
             }
-
             // SFP 필터 초기화
             const hqSet = new Set(SFP_DATA.map(d => d.본부));
             const hqSelect = document.getElementById('hqSelect');
@@ -398,6 +397,7 @@
                 opt.value = hq; opt.innerText = hq;
                 hqSelect.appendChild(opt);
             });
+
 
             // MUX 기지국 필터 초기화
             const muxBaseStationSelect = document.getElementById('muxBaseStationSelect');
@@ -481,13 +481,12 @@
             // 2. 그룹화 (기지국 + 국소명 + 시설 랙 기준)
             const groupsMap = new Map();
             filteredRows.forEach(row => {
-                const key = `${row.기지국}|${row.국소명}|${row['시설 랙']}`;               
+                const key = `${row.기지국}|${row.국소명}|${row['시설 랙']}`;
                 if (!groupsMap.has(key)) {
                     groupsMap.set(key, {
                         기지국: row.기지국,
                         국소명: row.국소명,
                         시설랙: row['시설 랙'],
-                        
                         items: []
                     });
                 }
@@ -561,7 +560,6 @@
                     <td><span class="badge">${item['시설 랙']}</span></td>
                     <td><span class="badge" style="background:#eef2ff; color:#4338ca;">${item.위치}</span></td>
                     <td><span class="badge" style="background:#f0fdf4; color:#166534;">${item['장비 타입']}</span></td>
-                    
                 </tr>
             `).join('');
 
@@ -577,7 +575,6 @@
             // 1. 같은 기지국과 시설 랙을 사용하는 모든 장비 데이터를 전체 리스트에서 필터링
             const allInRack = MUX_DATA_LIST.filter(d => 
                 d.기지국 === group.기지국 && d['시설 랙'] === group.시설랙
-                
             );
 
             let maxRow = 0;
@@ -602,7 +599,6 @@
                             <div style="font-size:1.5em; color:#bbb; margin-bottom:2px;">${posKey}</div>
                             <div style="font-weight:700; font-size:0.95em; line-height:1.1; word-break:break-all; margin-bottom:3px;">${firstItem.국소명}</div>
                             <div style="font-size:0.95em; opacity:0.9; font-weight:600;">${firstItem['장비 타입']}</div>
-                            
                         `;
                         
                         if (firstItem.국소명.includes('미사용')) slot.classList.add('unused-slot');
