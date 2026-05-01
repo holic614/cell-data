@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이메일 등록</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Pretendard', -apple-system, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #2563eb 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 24px;
+            padding: 36px 32px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+        }
+        .step-badge {
+            background: #eff6ff;
+            color: #2563eb;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-bottom: 12px;
+        }
+        h2 { font-size: 1.3rem; font-weight: 800; color: #1e293b; margin-bottom: 6px; }
+        .sub { font-size: 0.85rem; color: #64748b; margin-bottom: 24px; line-height: 1.5; }
+        .notice {
+            background: #fff7ed;
+            border: 1px solid #fed7aa;
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-size: 0.8rem;
+            color: #9a3412;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        label { display: block; font-size: 0.8rem; font-weight: 700; color: #64748b; margin-bottom: 6px; margin-top: 16px; }
+        input {
+            width: 100%;
+            padding: 13px 16px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 15px;
+            background: #f8fafc;
+            color: #1e293b;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input:focus { border-color: #2563eb; background: white; }
+        .hint { font-size: 0.75rem; color: #94a3b8; margin-top: 5px; }
+        button {
+            width: 100%;
+            padding: 14px;
+            margin-top: 24px;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(37,99,235,0.35);
+        }
+        .msg { text-align: center; margin-top: 12px; font-size: 13px; min-height: 20px; }
+        .error { color: #ef4444; }
+        .success { color: #16a34a; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <span class="step-badge">✨ 최초 1회 설정</span>
+        <h2>📧 이메일 & 비밀번호 등록</h2>
+        <p class="sub">비밀번호 찾기에 사용할 사내 이메일을 등록하고<br>새 비밀번호를 설정해주세요.</p>
+
+        <div class="notice">
+            ⚠️ <strong>@sk.com</strong> 사내 이메일만 등록 가능합니다.<br>
+            한 번 등록한 이메일은 비밀번호 찾기에 사용됩니다.
+        </div>
+
+        <label>사내 이메일</label>
+        <input type="email" id="email" placeholder="example@sk.com" />
+        <p class="hint">@sk.com 이메일만 사용 가능합니다</p>
+
+        <label>새 비밀번호</label>
+        <input type="password" id="newPw" placeholder="새 비밀번호 (영문+숫자 8자 이상)" />
+
+        <label>새 비밀번호 확인</label>
+        <input type="password" id="confirmPw" placeholder="비밀번호 재입력" />
+
+        <button onclick="register()">등록 완료</button>
+        <div class="msg" id="msg"></div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://hamwwywmxgrtcflqjhiu.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_Y0xw-puAOpBXVZ8g-I6JfA_4dz8rESU';
+        const { createClient } = supabase;
+        const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // 로그인 확인
+        const user = JSON.parse(sessionStorage.getItem('user') || 'null');
+        if (!user || Date.now() > user.expires) {
+            window.location.href = './login.html';
+        }
+
+        function md5(str) { return CryptoJS.MD5(str).toString(); }
+
+        function showMsg(text, isError = false) {
+            const el = document.getElementById('msg');
+            el.textContent = text;
+            el.className = 'msg ' + (isError ? 'error' : 'success');
+        }
+
+        async function register() {
+            const email = document.getElementById('email').value.trim().toLowerCase();
+            const newPw = document.getElementById('newPw').value;
+            const confirmPw = document.getElementById('confirmPw').value;
+
+            if (!email || !newPw || !confirmPw) {
+                return showMsg('모든 항목을 입력해주세요.', true);
+            }
+            if (!email.endsWith('@sk.com')) {
+                return showMsg('SK 사내 이메일(@sk.com)만 등록 가능합니다.', true);
+            }
+            if (newPw !== confirmPw) {
+                return showMsg('비밀번호가 일치하지 않습니다.', true);
+            }
+            if (newPw.length < 8 || !/[a-zA-Z]/.test(newPw) || !/[0-9]/.test(newPw)) {
+                return showMsg('영문+숫자 포함 8자 이상으로 설정해주세요.', true);
+            }
+
+            // 이메일 중복 확인
+            const { data: dup } = await db
+                .from('employees')
+                .select('emp_id')
+                .eq('email', email)
+                .neq('emp_id', user.emp_id)
+                .maybeSingle();
+
+            if (dup) {
+                return showMsg('이미 등록된 이메일입니다.', true);
+            }
+
+            const { error } = await db
+                .from('employees')
+                .update({
+                    email: email,
+                    password: md5(newPw),
+                    is_first_login: false
+                })
+                .eq('emp_id', user.emp_id);
+
+            if (error) return showMsg('오류가 발생했습니다. 다시 시도해주세요.', true);
+
+            showMsg('✅ 등록 완료! 메인 페이지로 이동합니다.');
+            setTimeout(() => window.location.href = './index.html', 1500);
+        }
+    </script>
+</body>
+</html>

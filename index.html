@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>강남 5G 통합 지원 시스템</title>
+    <!-- ✅ Supabase SDK 추가 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #1e40af;
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border-radius: 20px;
+            --nav-height: 70px;
+        }
+
+        body {
+            font-family: 'Pretendard', -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+            font-size: 14px;
+            color: var(--text-main);
+        }
+
+        header {
+            background: linear-gradient(135deg, #0f172a 0%, #2563eb 100%);
+            color: white;
+            padding: 40px 20px 60px;
+            text-align: center;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+            border-bottom-left-radius: 40px;
+            border-bottom-right-radius: 40px;
+        }
+
+        header h2 { margin: 0; font-size: 1.5rem; font-weight: 800; letter-spacing: -1px; }
+        header p { margin: 10px 0 0; opacity: 0.9; font-size: 0.9rem; }
+
+        /* ✅ 사용자 정보 바 */
+        .user-bar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 20px;
+            background: rgba(255,255,255,0.15);
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.9);
+        }
+        .user-bar a {
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            padding: 4px 10px;
+            border: 1px solid rgba(255,255,255,0.4);
+            border-radius: 6px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            background: rgba(255,255,255,0.1);
+        }
+        .user-bar a:hover { background: rgba(255,255,255,0.2); }
+
+        .container {
+            padding: 0 16px 20px;
+            max-width: 900px;
+            margin: -30px auto 0;
+        }
+
+        .view-section { display: none; }
+        .view-section.active { display: block; animation: fadeIn 0.3s ease; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            box-shadow: 0 15px 20px -5px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+
+        .filter-group { display: flex; flex-direction: column; gap: 15px; }
+        .row-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        label { font-weight: 600; font-size: 0.8rem; color: var(--text-main); margin-bottom: 5px; display: block; }
+        
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            box-sizing: border-box;
+            font-size: 15px;
+            background-color: #f8fafc;
+        }
+
+        button.main-btn {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: white;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 8px 15px -3px rgba(37, 99, 235, 0.3);
+        }
+
+        .table-container {
+            overflow-x: auto;
+            background: white;
+            border-radius: var(--border-radius);
+            border: 1px solid #e2e8f0;
+        }
+
+        table { width: 100%; border-collapse: collapse; min-width: 600px; }
+        th, td { padding: 14px; text-align: left; border-bottom: 1px solid #f1f5f9; }
+        th { background-color: #f8fafc; color: var(--primary-color); font-weight: 800; font-size: 0.75rem; text-transform: uppercase; }
+        .no-data { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+
+        .top-nav-card {
+            position: sticky;
+            top: 10px;
+            background: white;
+            border-radius: var(--border-radius);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            height: var(--nav-height);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            z-index: 1000;
+        }
+        .nav-item {
+            flex: 1;
+            text-align: center;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .nav-item.active { color: var(--primary-color); }
+        .nav-icon { font-size: 1.4rem; display: block; margin-bottom: 4px; }
+
+        .search-results { margin-top: 12px; border: 1px solid var(--border-color); border-radius: 12px; max-height: 250px; overflow-y: auto; display: none; background: white; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        .result-item { padding: 12px 20px; cursor: pointer; border-bottom: 1px solid var(--border-color); transition: all 0.2s; border-left: 4px solid transparent; text-align: left; }
+        .result-item:hover { background-color: #f9fafb; border-left-color: var(--primary-color); padding-left: 24px; }
+        .result-item strong { display: block; color: var(--text-main); font-size: 1.05em; }
+        .result-meta { font-size: 0.85em; color: var(--text-muted); margin-top: 4px; display: flex; gap: 10px; }
+        
+        .info-panel { display: none; background: #f8faff; border-left: 6px solid var(--primary-color); margin-top: 20px; }
+        .rack-container { display: none; background: #fff5f5; border-left: 6px solid #b91c1c; margin-top: 20px; }
+        .rack-title { font-weight: 800; font-size: 1.1em; color: #b91c1c; margin-bottom: 20px; text-align: center; }
+        .rack-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; background: #333; padding: 10px; border: 5px solid #222; border-radius: 5px; width: 100%; max-width: 100%; box-sizing: border-box; margin: 0 auto; }
+        .rack-slot { width: 100%; height: 80%; background: #555; color: #eee; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 0.7em; border: 1px solid #444; text-align: center; padding: 4px; overflow: hidden; }
+        .rack-slot.empty { background: #444; color: #777; }
+        .highlight { background-color: #ffeb3b !important; color: #000 !important; font-weight: bold; border: 2px solid #f44336; animation: blink 1s infinite; }
+        .unused-bg { background-color: #ffebee !important; color: #d32f2f !important; }
+        .unused-slot { background-color: #d32f2f !important; color: #fff !important; border-color: #b71c1c !important; }
+        .unused-text { color: #d32f2f; font-weight: bold; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        #wavelengthPopupOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none; justify-content: center; align-items: center; z-index: 20000;
+        }
+        .popup-content { 
+            background: white; padding: 25px; border-radius: var(--border-radius);
+            width: 90%; max-height: 80vh; overflow-y: auto; position: relative;
+        }
+        .close-btn { 
+            position: sticky; top: -10px; float: right; font-size: 30px; 
+            cursor: pointer; background: white; border-radius: 50%; width: 35px; height: 35px;
+            display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.85em; font-weight: 500; background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; }
+
+        .mini-btn-group { display: flex; gap: 8px; justify-content: center; margin: 15px 0; }
+        .mini-btn {
+            padding: 8px 16px; font-size: 0.8rem; background: #475569;
+            border-radius: 8px; color: white; border: none; cursor: pointer;
+        }
+
+        .spec-table { width: auto; min-width: 320px; border-collapse: collapse; margin: 10px auto; font-size: 0.75rem; }
+        .spec-table th, .spec-table td { border: 1px solid #e2e8f0; padding: 8px; text-align: center; }
+        .spec-table th { background: #f8fafc; color: #1e40af; font-weight: 700; }
+        .spec-table .category { background: #f1f5f9; font-weight: 600; text-align: left; }
+        .spec-data-list { text-align: left; font-size: 0.7rem; line-height: 1.4; }
+        .spec-section-title { font-weight: bold; color: #2563eb; display: block; margin-top: 4px; }
+        
+        .lmux-header { background: #fff7ed !important; color: #854d0e !important; }
+        .ch-name { color: #ea580c; font-weight: 700; }
+    </style>
+</head>
+<body>
+
+    <!-- ✅ 헤더 (사용자 정보 바 포함) -->
+    <header>
+        <div class="user-bar">
+            <span id="userNameDisplay">로딩중...</span>
+            <a href="./change-password.html">🔒 비밀번호 변경</a>
+            <a onclick="logout()">로그아웃</a>
+        </div>
+        <h2 id="view-title">5G SFP 통합 조회</h2>
+        <p id="view-desc">강남본부 SFP 운용 현황</p>
+    </header>
+
+    <div class="container">
+        <nav class="top-nav-card">
+            <div class="nav-item active" onclick="switchView('sfp', this)">
+                <span class="nav-icon">🔍</span>
+                <span>SFP 조회</span>
+            </div>
+            <div class="nav-item" onclick="switchView('mux', this)">
+                <span class="nav-icon">📍</span>
+                <span>MUX 위치</span>
+            </div>
+        </nav>
+
+        <!-- 섹션 1: SFP 조회 -->
+        <section id="sfp-view" class="view-section active">
+            <div class="card">
+                <div class="filter-group">
+                    <div class="row-group">
+                        <div>
+                            <label>본부</label>
+                            <select id="hqSelect" onchange="updateTeamList()">
+                                <option value="">본부 선택</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>팀</label>
+                            <select id="teamSelect">
+                                <option value="">팀 선택</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row-group">
+                        <div>
+                            <label>DU명</label>
+                            <input type="text" id="duInput" placeholder="예: SITC">
+                        </div>
+                        <div>
+                            <label>국소명 / 파장</label>
+                            <input type="text" id="keywordInput" placeholder="예: 롯데, 1330">
+                        </div>
+                    </div>
+                    <button onclick="searchSFP()" class="main-btn">SFP 검색 실행</button>
+                </div>
+            </div>
+            <div class="mini-btn-group">
+                <button onclick="openWavelength('C-MUX')" class="mini-btn">C-MUX 파장표</button>
+                <button onclick="openWavelength('L-MUX')" class="mini-btn">L-MUX 파장표</button>
+            </div>
+            <div id="sfpResultCount" style="text-align:center; color:var(--primary-color); font-weight:700; margin-bottom:10px;">검색 조건을 설정해 주세요.</div>
+            <div class="table-container">
+                <table style="min-width: 800px;">
+                    <thead>
+                        <tr><th>DU명</th><th>PORT</th><th>국소명</th><th>파장</th><th>벤더사</th><th>모델명</th></tr>
+                    </thead>
+                    <tbody id="sfpResultBody">
+                        <tr><td colspan="6" class="no-data">조회 결과가 여기에 표시됩니다.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 섹션 2: MUX 위치찾기 -->
+        <section id="mux-view" class="view-section">
+            <div class="card">
+                <div class="filter-group">
+                    <div class="row-group">
+                        <div>
+                            <label>기지국 선택</label>
+                            <select id="muxBaseStationSelect">
+                                <option value="">기지국 전체</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>국소명 키워드 입력</label>
+                            <input type="text" id="muxSearchInput" placeholder="예: 브라운, 여의도">
+                        </div>
+                    </div>
+                    <button onclick="searchMUX()" class="main-btn">MUX 위치 검색</button>
+                </div>
+                <div id="muxSearchResults" class="search-results"></div>
+            </div>
+
+            <div id="muxInfoPanel" class="card info-panel">
+                <strong style="color:var(--primary-color); display:block; margin-bottom:15px;">📋 상세정보</strong>
+                <div class="table-container" style="border:none;">
+                <table>
+                        <thead>
+                            <tr><th>기지국</th><th>국소명</th><th>시설 랙</th><th>위치</th><th>타입</th></tr>
+                        </thead>
+                        <tbody id="muxInfoBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="rackContainer" class="card rack-container">
+                <div id="rackTitle" class="rack-title">📍 Rack Occupancy Layout</div>
+                <div id="rackGrid" class="rack-grid"></div>
+            </div>
+
+            <div id="muxDefaultMsg" style="text-align:center; color:var(--text-muted); padding:40px 0;">
+                조회 결과가 여기에 표시됩니다.
+            </div>
+        </section>
+    </div>
+
+    <!-- 파장표 팝업 -->
+    <div id="wavelengthPopupOverlay">
+        <div class="popup-content">
+            <span class="close-btn" onclick="closePopup()">&times;</span>
+            <h3 id="popupTitle">파장표</h3>
+            <div id="popupTableContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // ✅ Supabase 설정 (본인 값으로 교체하세요)
+        // ============================================================
+
+        const SUPABASE_URL = 'https://hamwwywmxgrtcflqjhiu.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_Y0xw-puAOpBXVZ8g-I6JfA_4dz8rESU';
+        const { createClient } = supabase;
+        const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // ============================================================
+        // ✅ 로그인 인증 체크 (페이지 진입시 자동 실행)
+        // ============================================================
+        (function checkAuth() {
+            const userStr = sessionStorage.getItem('user');
+            if (!userStr) {
+                window.location.href = './login.html';
+                return;
+            }
+            const user = JSON.parse(userStr);
+            if (!user || Date.now() > user.expires) {
+                sessionStorage.removeItem('user');
+                window.location.href = './login.html';
+                return;
+            }
+            // 사용자 이름 표시
+            document.getElementById('userNameDisplay').textContent = user.name + '님 환영합니다 👋';
+        })();
+
+        function logout() {
+            if (confirm('로그아웃 하시겠습니까?')) {
+                sessionStorage.removeItem('user');
+                window.location.href = './login.html';
+            }
+        }
+
+        // ============================================================
+        // 기존 데이터 및 기능 (수정 없이 유지)
+        // ============================================================
+        let SFP_DATA = [];
+        let MUX_DATA_LIST = [];
+
+        function switchView(view, el) {
+            document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            
+            document.getElementById(view + '-view').classList.add('active');
+            el.classList.add('active');
+
+            const title = document.getElementById('view-title');
+            const desc = document.getElementById('view-desc');
+            
+            if(view === 'sfp') {
+                title.innerText = "5G SFP 통합 조회";
+                desc.innerText = "강남본부 SFP 운용 현황";
+            } else {
+                title.innerText = "5G MUX 위치찾기";
+                desc.innerText = "MUX 설치 위치 상세 안내";
+            }
+        }
+
+        async function initApp() {
+            try {
+                const [sfpRes, muxRes] = await Promise.all([
+                    fetch("https://raw.githubusercontent.com/holic614/cell-data/main/sfp_data.json"),
+                    fetch("https://raw.githubusercontent.com/holic614/cell-data/main/mux_data.json")
+                ]);
+                
+                SFP_DATA = await sfpRes.json();
+                MUX_DATA_LIST = await muxRes.json();
+                
+            } catch (error) {
+                console.error("데이터 로드 중 오류 발생:", error);
+                alert("데이터 파일을 찾을 수 없거나 불러오는 데 실패했습니다.");
+                return;
+            }
+
+            const hqSet = new Set(SFP_DATA.map(d => d.본부));
+            const hqSelect = document.getElementById('hqSelect');
+            hqSet.forEach(hq => {
+                const opt = document.createElement('option');
+                opt.value = hq; opt.innerText = hq;
+                hqSelect.appendChild(opt);
+            });
+
+            const muxBaseStationSelect = document.getElementById('muxBaseStationSelect');
+            const baseStations = [...new Set(MUX_DATA_LIST.map(d => d.기지국))].sort();
+            baseStations.forEach(bs => {
+                if(bs) {
+                    const opt = document.createElement('option');
+                    opt.value = bs; opt.innerText = bs;
+                    muxBaseStationSelect.appendChild(opt);
+                }
+            });
+        }
+
+        function updateTeamList() {
+            const hq = document.getElementById('hqSelect').value;
+            const teamSelect = document.getElementById('teamSelect');
+            teamSelect.innerHTML = '<option value="">팀 선택</option>';
+            const filteredTeams = [...new Set(SFP_DATA.filter(d => d.본부 === hq).map(d => d.팀))];
+            filteredTeams.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t; opt.innerText = t;
+                teamSelect.appendChild(opt);
+            });
+        }
+
+        function searchSFP() {
+            const hq = document.getElementById('hqSelect').value;
+            const team = document.getElementById('teamSelect').value;
+            const du = document.getElementById('duInput').value.toUpperCase();
+            const kw = document.getElementById('keywordInput').value.toLowerCase();
+
+            const results = SFP_DATA.filter(d => {
+                return (!hq || d.본부 === hq) &&
+                       (!team || d.팀 === team) &&
+                       (!du || d.du_nm.includes(du)) &&
+                       (!kw || d.repeater_name.toLowerCase().includes(kw) || d.tx_nm.includes(kw));
+            });
+
+            renderSFP(results);
+        }
+
+        function renderSFP(data) {
+            const body = document.getElementById('sfpResultBody');
+            document.getElementById('sfpResultCount').innerText = `총 ${data.length}건이 검색되었습니다.`;
+            
+            if(data.length === 0) {
+                body.innerHTML = '<tr><td colspan="5" class="no-data">검색 결과가 없습니다.</td></tr>';
+                return;
+            }
+
+            body.innerHTML = data.map(d => `
+                <tr>
+                    <td style="font-size:11px">${d.du_nm}</td>
+                    <td><span class="badge">${d.ru_conf}</span></td>
+                    <td style="font-weight:600">${d.repeater_name}</td>
+                    <td><span style="color:#2563eb">${d.tx_nm}</span></td>
+                    <td>${d.vendor}</td>
+                    <td style="font-size:11px; color:var(--text-muted);">${d.hw_name}</td>
+                </tr>
+            `).join('');
+        }
+
+        function searchMUX() {
+            const baseStationFilter = document.getElementById('muxBaseStationSelect').value;
+            const keyword = document.getElementById('muxSearchInput').value.trim().toLowerCase();
+            const resultsContainer = document.getElementById('muxSearchResults');
+            const defaultMsg = document.getElementById('muxDefaultMsg');
+            
+            if (!keyword && !baseStationFilter) { alert("기지국을 선택하거나 국소명을 입력하세요."); return; }
+
+            let filteredRows = MUX_DATA_LIST.filter(item => {
+                const matchBase = !baseStationFilter || item.기지국 === baseStationFilter;
+                const matchKw = !keyword || item.국소명.toLowerCase().includes(keyword);
+                return matchBase && matchKw;
+            });
+
+            const groupsMap = new Map();
+            filteredRows.forEach(row => {
+                const key = `${row.기지국}|${row.국소명}|${row['시설 랙']}`;
+                if (!groupsMap.has(key)) {
+                    groupsMap.set(key, {
+                        기지국: row.기지국,
+                        국소명: row.국소명,
+                        시설랙: row['시설 랙'],
+                        items: []
+                    });
+                }
+                groupsMap.get(key).items.push(row);
+            });
+
+            const groups = Array.from(groupsMap.values());
+
+            groups.sort((a, b) => {
+                if (a.기지국 !== b.기지국) return a.기지국.localeCompare(b.기지국);
+                if (a.국소명 !== b.국소명) return a.국소명.localeCompare(b.국소명);
+                return a.시설랙.localeCompare(b.시설랙);
+            });
+
+            if (groups.length === 0) {
+                alert("해당 조건의 데이터를 찾을 수 없습니다.");
+                resultsContainer.style.display = 'none';
+                document.getElementById('muxInfoPanel').style.display = 'none';
+                document.getElementById('rackContainer').style.display = 'none';
+                if(defaultMsg) defaultMsg.style.display = 'block';
+                return;
+            }
+
+            window.currentMUXGroups = groups;
+
+            if (groups.length === 1) {
+                selectMUXGroup(0);
+                resultsContainer.style.display = 'none';
+                if(defaultMsg) defaultMsg.style.display = 'none';
+            } else {
+                resultsContainer.innerHTML = groups.map((g, idx) => `
+                    <div class="result-item" onclick="selectMUXGroup(${idx})">
+                        <strong>${g.국소명}</strong>
+                        <div class="result-meta">
+                            <span>🏢 ${g.기지국}</span>
+                            <span>📍 ${g.시설랙}</span>
+                            <span>🔢 장비 ${g.items.length}개</span>
+                        </div>
+                    </div>
+                `).join('');
+                resultsContainer.style.display = 'block'; 
+                if(defaultMsg) defaultMsg.style.display = 'none';
+                document.getElementById('muxInfoPanel').style.display = 'none';
+                document.getElementById('rackContainer').style.display = 'none';
+            }
+        }
+
+        function selectMUXGroup(index) {
+            const group = window.currentMUXGroups[index];
+            document.getElementById('muxSearchResults').style.display = 'none';
+            document.getElementById('muxSearchInput').value = group.국소명;
+            
+            group.items.sort((a, b) => {
+                const [ar, ac] = a.위치.split('-').map(Number);
+                const [br, bc] = b.위치.split('-').map(Number);
+                if (ar !== br) return ar - br;
+                return ac - bc;
+            });
+
+            const panel = document.getElementById('muxInfoPanel');
+            const body = document.getElementById('muxInfoBody');
+            panel.style.display = 'block';
+            body.innerHTML = group.items.map(item => `
+                <tr class="${item.국소명.includes('미사용') ? 'unused-bg' : ''}">
+                    <td>${item.기지국}</td>
+                    <td style="font-weight: 600;">${item.국소명}</td>
+                    <td><span class="badge">${item['시설 랙']}</span></td>
+                    <td><span class="badge" style="background:#eef2ff; color:#4338ca;">${item.위치}</span></td>
+                    <td><span class="badge" style="background:#f0fdf4; color:#166534;">${item['장비 타입']}</span></td>
+                </tr>
+            `).join('');
+
+            const container = document.getElementById('rackContainer');
+            const title = document.getElementById('rackTitle');
+            const grid = document.getElementById('rackGrid');
+            
+            container.style.display = 'block';
+            title.innerText = `📍 [${group.기지국} / ${group.시설랙}] 랙 내부 위치도`;
+            grid.innerHTML = '';
+
+            const allInRack = MUX_DATA_LIST.filter(d => 
+                d.기지국 === group.기지국 && d['시설 랙'] === group.시설랙
+            );
+
+            let maxRow = 0;
+            allInRack.forEach(d => {
+                const [r] = d.위치.split('-').map(Number);
+                if (r > maxRow) maxRow = r;
+            });
+            if (maxRow < 2) maxRow = 2; 
+
+            for (let r = 1; r <= maxRow; r++) {
+                for (let c = 1; c <= 4; c++) {
+                    const posKey = `${r}-${c}`;
+                    const itemsInPos = allInRack.filter(d => d.위치 === posKey);
+                    const slot = document.createElement('div');
+                    slot.className = 'rack-slot';
+                    
+                    if (itemsInPos.length > 0) {
+                        const firstItem = itemsInPos[0];
+                        slot.innerHTML = `
+                            <div style="font-size:1.5em; color:#bbb; margin-bottom:2px;">${posKey}</div>
+                            <div style="font-weight:700; font-size:0.95em; line-height:1.1; word-break:break-all; margin-bottom:3px;">${firstItem.국소명}</div>
+                            <div style="font-size:0.95em; opacity:0.9; font-weight:600;">${firstItem['장비 타입']}</div>
+                        `;
+                        
+                        if (firstItem.국소명.includes('미사용')) slot.classList.add('unused-slot');
+                        else if (firstItem.국소명 === group.국소명) slot.classList.add('highlight'); 
+                    } else {
+                        slot.className = 'rack-slot empty';
+                        slot.innerText = posKey;
+                    }
+                    grid.appendChild(slot);
+                }
+            }
+        }
+
+        function openWavelength(type) {
+            const overlay = document.getElementById('wavelengthPopupOverlay');
+            const container = document.getElementById('popupTableContainer');
+            document.getElementById('popupTitle').innerText = type + " 파장표 표준";
+            
+            const WAVELENGTH_TABLES = {
+        'C-MUX': `
+            <h2 style="font-size:1.3rem; color:#1e40af; margin-bottom:15px; text-align:left;">CMUX SPEC</h2>
+            <table class="spec-table">
+                <thead>
+                    <tr>
+                        <th rowspan="2" colspan="2">항목</th>
+                        <th rowspan="2" style="width:40px">단위</th>
+                        <th colspan="5">규격(Tx 기준)</th>
+                        <th rowspan="2" style="width:80px">비고</th>
+                    </tr>
+                    <tr>
+                        <th>CO1</th><th>RN1</th><th>CO2</th><th>RN2</th><th>RING-RN</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="category" colspan="2">COT_COM Port<br>Wavelength(λc)</td>
+                        <td>nm</td>
+                        <td colspan="5" style="letter-spacing:-0.5px">1270/1290/1310/1330/1350/1410/1430/1450/1470/1490/1510/1530/1550/1570/1590/1610</td>
+                        <td style="font-size:0.65rem">16개 파장대역</td>
+                    </tr>
+                    <tr>
+                        <td class="category" colspan="2">5G NR Port<br>Wavelength(λc)</td>
+                        <td>nm</td>
+                        <td><div class="spec-data-list"><span class="spec-section-title">[Basic]</span>1290.818nm(Ch1)<br>1291.652nm(Ch2)<br>1292.487nm(Ch3)<br>1293.324nm(Ch4)<br><span class="spec-section-title">[Extension]</span>1294.161nm(Ch5)<br>1295.000nm(Ch6)<br>1295.839nm(Ch7)<br>1296.680nm(Ch8)</div></td>
+                        <td><div class="spec-data-list"><span class="spec-section-title">[Basic]</span>1283.358nm(Ch1)<br>1284.183nm(Ch2)<br>1285.008nm(Ch3)<br>1285.835nm(Ch4)<br><span class="spec-section-title">[Extension]</span>1286.663nm(Ch5)<br>1287.492nm(Ch6)<br>1288.322nm(Ch7)<br>1289.153nm(Ch8)</div></td>
+                        <td><div class="spec-data-list"><span class="spec-section-title">[Basic]</span>1271.115nm(Ch1)<br>1271.924nm(Ch2)<br>1272.734nm(Ch3)<br>1273.545nm(Ch4)<br><span class="spec-section-title">[Extension]</span>1274.357nm(Ch5)<br>1275.170nm(Ch6)<br>1275.984nm(Ch7)<br>1276.799nm(Ch8)</div></td>
+                        <td><div class="spec-data-list"><span class="spec-section-title">[Basic]</span>1263.881nm(Ch1)<br>1264.680nm(Ch2)<br>1265.481nm(Ch3)<br>1266.283nm(Ch4)<br><span class="spec-section-title">[Extension]</span>1267.086nm(Ch5)<br>1267.889nm(Ch6)<br>1268.694nm(Ch7)<br>1269.500nm(Ch8)</div></td>
+                        <td>--</td>
+                        <td>Rx 기준</td>
+                    </tr>
+                    <tr>
+                        <td class="category" colspan="2">확장(예비) Port<br>Wavelength(λc)</td>
+                        <td>nm</td>
+                        <td>1302.5~1477.5nm</td><td>1302.5~1357.5nm<br>1402.5~1617.5nm</td><td>1482.5~1617.5nm</td><td>1482.5~1617.5nm</td><td>--</td>
+                        <td style="font-size:0.65rem">RN1 PtoP<br>1270±7.5nm 포함</td>
+                    </tr>
+                    <tr>
+                        <td class="category" colspan="2">RN Monitor Port<br>Wavelength(λc)</td>
+                        <td>dB</td>
+                        <td colspan="2" style="font-weight:bold">1289.985nm</td><td colspan="2" style="font-weight:bold">1270.307nm</td><td>--</td><td>--</td>
+                    </tr>
+                    <tr>
+                        <td rowspan="6" class="category">Insertion Loss</td>
+                        <td style="background:#f8fafc; font-weight:600">5G NR Port</td>
+                        <td>dB</td><td>Max 3.5</td><td>Max 3.5</td><td>Max 3.5</td><td>Max 8.0</td><td>Max 1.2(W/E)</td><td></td>
+                    </tr>
+                    <tr><td style="background:#f8fafc; font-weight:600">CO-RN Link Loss</td><td>dB</td><td>Max 6.0/10.5</td><td>Max 6.0</td><td>Max 13/16</td><td>Max 13/16</td><td>--</td><td></td></tr>
+                    <tr><td style="background:#f8fafc; font-weight:600">MON Port</td><td>dB</td><td>Max 3.5</td><td>--</td><td>--</td><td>--</td><td>--</td><td></td></tr>
+                    <tr><td style="background:#f8fafc; font-weight:600">5G_EXT Port</td><td>dB</td><td>Max 3.5</td><td>Max 3.5</td><td>Max 3.5</td><td>Max 6.0</td><td>Max 5.0</td><td></td></tr>
+                    <tr><td style="background:#f8fafc; font-weight:600">EXT Port</td><td>dB</td><td>Max 1.2</td><td>Max 1.2</td><td>Max 1.2</td><td>Max 6.0</td><td>--</td><td></td></tr>
+                    <tr><td style="background:#f8fafc; font-weight:600">RN Port</td><td>dB</td><td>--</td><td>Max 8.0</td><td>--</td><td>Max 15</td><td>Max 5.0</td><td></td></tr>
+                </tbody>
+            </table>
+        `,
+        'L-MUX': `
+            <h2 style="font-size:1.2rem; color:#854d0e; margin-bottom:15px; text-align:center;">L-MUX 파장표</h2>
+            <table class="spec-table" style="width: fit-content; min-width: 250px;">
+                <thead>
+                    <tr><th class="lmux-header">채널</th><th class="lmux-header">명칭</th><th class="lmux-header">파장(nm)</th><th class="lmux-header">위치</th></tr>
+                </thead>
+                <tbody>
+                    <tr class="lmux-row"><td rowspan="2" style="font-weight:bold">1CH</td><td class="ch-name">29CH1</td><td>1290</td><td>DUH</td></tr>
+                    <tr class="lmux-row"><td class="ch-name">27CL1</td><td>1270</td><td>AAU(PRU)</td></tr>
+                    <tr class="lmux-row"><td rowspan="2" style="font-weight:bold">2CH</td><td class="ch-name">33CH2</td><td>1330</td><td>DUH</td></tr>
+                    <tr class="lmux-row"><td class="ch-name">31CL2</td><td>1310</td><td>AAU(PRU)</td></tr>
+                    <tr class="lmux-row"><td rowspan="2" style="font-weight:bold">3CH</td><td class="ch-name">43CH3</td><td>1430</td><td>DUH</td></tr>
+                    <tr class="lmux-row"><td class="ch-name">41CL3</td><td>1410</td><td>AAU(PRU)</td></tr>
+                    <tr class="lmux-row"><td rowspan="2" style="font-weight:bold">4CH</td><td class="ch-name">49CH4</td><td>1490</td><td>DUH</td></tr>
+                    <tr class="lmux-row"><td class="ch-name">47CL4</td><td>1470</td><td>AAU(PRU)</td></tr>
+                </tbody>
+            </table>
+        `
+            };
+
+            container.innerHTML = WAVELENGTH_TABLES[type] || "데이터가 없습니다.";
+            overlay.style.display = 'flex';
+        }
+
+        function closePopup() {
+            document.getElementById('wavelengthPopupOverlay').style.display = 'none';
+        }
+
+        // ✅ 앱 초기화 (인증 완료 후 자동 실행)
+        initApp();
+
+        document.getElementById('muxSearchInput').addEventListener('keyup', (e) => { if(e.keyCode === 13) searchMUX(); });
+    </script>
+</body>
+</html>
